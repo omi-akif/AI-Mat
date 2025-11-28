@@ -4,6 +4,20 @@ __generated_with = "0.17.7"
 app = marimo.App(width="full")
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Data Wrangling and Dataset Generation
+
+    This notebook prepares various datasets for different models and tasks:
+    1.  **Word2Vec**: Combines job text and resume text for training word embeddings.
+    2.  **Two Tower Model**: Creates positive and negative samples for training the retrieval model.
+    3.  **DLEM Model**: Prepares data for the Deep Learning Entity Matching model.
+    4.  **Graph Models**: Generates transition data for Job-Job, Job-Skill, and Skill-Skill graphs.
+    """)
+    return
+
+
 @app.cell
 def _():
     import ast
@@ -13,33 +27,46 @@ def _():
     from datetime import datetime
     from itertools import combinations
     from difflib import SequenceMatcher
-    return SequenceMatcher, ast, combinations, json, pd
+    import marimo as mo
+    return SequenceMatcher, ast, combinations, json, mo, pd
 
 
-@app.cell
-def _(pd):
-    job_df_cleaned = pd.read_csv('cleaned_datasets/job_data_df_clean.csv')
-    candidate_df_cleaned = pd.read_csv('cleaned_datasets/candidate_data_df_clean.csv')
-    return candidate_df_cleaned, job_df_cleaned
-
-
-@app.cell
-def _(job_df_cleaned):
-    job_df_cleaned
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## 1. Load Cleaned Data
+    """)
     return
 
 
 @app.cell
-def _(candidate_df_cleaned):
-    candidate_df_cleaned
+def _(pd):
+    job_df_cleaned = pd.read_csv('../datasets/cleaned_datasets/job_data_df_clean.csv')
+    candidate_df_cleaned = pd.read_csv('../datasets/cleaned_datasets/candidate_data_df_clean.csv')
+    return candidate_df_cleaned, job_df_cleaned
+
+
+@app.cell
+def _(candidate_df_cleaned, job_df_cleaned):
+    print("Job Data Shape:", job_df_cleaned.shape)
+    print("Candidate Data Shape:", candidate_df_cleaned.shape)
     return
 
 
 @app.cell
 def _(ast, candidate_df_cleaned):
+    # Parse stringified lists
     candidate_df_cleaned['preferredJobCategory_industry_names'] = candidate_df_cleaned['preferredJobCategory_industry_names'].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) and x.strip() else [])
 
     candidate_df_cleaned['preferredJobCategory_department_names'] = candidate_df_cleaned['preferredJobCategory_department_names'].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) and x.strip() else [])
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## 2. Word2Vec Data Preparation
+    """)
     return
 
 
@@ -54,9 +81,18 @@ def _(candidate_df_cleaned, job_df_cleaned, pd):
         candidate_df_cleaned[candidate_df_cleaned['candidate_latest_resume_text'] != 'undefined']['candidate_latest_resume_text'].reset_index(drop=True).dropna()
     ], ignore_index=True).tolist()
 
-    with open('helping_datasets/job_candidate_text_data_word2vec.txt', 'w') as f:
+    with open('../datasets/helping_datasets/job_candidate_text_data_word2vec.txt', 'w') as f:
         for text in combined_texts:
             f.write(text + '\n')
+    print("Word2Vec text data saved.")
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## 3. Two Tower Model Data Preparation (Negative Sampling)
+    """)
     return
 
 
@@ -90,32 +126,50 @@ def _(SequenceMatcher, candidate_df_cleaned, job_df_cleaned, pd):
     def has_matching_preference(row):
         candidate_industries = set(row['preferredJobCategory_industry_names']) if isinstance(row['preferredJobCategory_industry_names'], list) else set()
         candidate_departments = set(row['preferredJobCategory_department_names']) if isinstance(row['preferredJobCategory_department_names'], list) else set()
-    
+
         candidate_industries.discard('unidentified')
         candidate_departments.discard('unidentified')
-    
+
         if not candidate_industries and not candidate_departments:
             return True
-    
+
         def fuzzy_match(candidate_set, job_value):
             return any(SequenceMatcher(None, cand.lower(), job_value.lower()).ratio() > 0.7 for cand in candidate_set)
-    
+
         has_industry_match = fuzzy_match(candidate_industries, job_sample['industry_name'].iloc[0])
         has_department_match = fuzzy_match(candidate_departments, job_sample['department_name'].iloc[0])
-    
+
         return has_industry_match or has_department_match
 
 
     # Create combinations
     combined_df = job_sample.merge(candidates_sample, how='cross')
-    combined_df.to_csv('helping_datasets/job_candidate_annotation_data_two_tower_v2.csv')
+    combined_df.to_csv('../datasets/helping_datasets/job_candidate_annotation_data_two_tower_v2.csv')
+    print("Two Tower annotation data saved.")
     return (combined_df,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## 4. DLEM Model Data Preparation
+    """)
+    return
 
 
 @app.cell
 def _(combined_df):
     # Sample for DLEM model
-    combined_df[['job_text_data', 'candidate_latest_resume_text']].to_csv('helping_datasets/job_candidate_annotation_data_dlem.csv', index=False)
+    combined_df[['job_text_data', 'candidate_latest_resume_text']].to_csv('../datasets/helping_datasets/job_candidate_annotation_data_dlem.csv', index=False)
+    print("DLEM annotation data saved.")
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## 5. Graph Models Data Preparation
+    """)
     return
 
 
@@ -178,18 +232,14 @@ def _(ast, candidate_df_cleaned, json, pd):
 
     job_to_job_transition_df = job_to_job_transition_df.astype(str)
 
-    job_to_job_transition_df.to_csv('helping_datasets/job_to_job_transition_inf_lear.csv', index=False)
+    job_to_job_transition_df.to_csv('../datasets/helping_datasets/job_to_job_transition_inf_lear.csv', index=False)
+    print("Job-Job transition data saved.")
     return
 
 
 @app.cell
 def _(ast, job_df_cleaned):
     # Sample for Job Title to Job Skill transition graph
-
-    # job_to_skill_transition_df = job_df_cleaned[['job_title', 'job_skill_name']].explode('job_skill_name').reset_index(drop=True)
-    # job_to_skill_transition_df.columns = ['job_title', 'job_skill']
-    # job_to_skill_transition_df.to_csv('helping_datasets/job_to_skill_transition_inf_lear.csv')
-
 
     # Step 1: Convert string list → actual Python list
     job_df_cleaned['job_skill_name'] = job_df_cleaned['job_skill_name'].apply(
@@ -213,9 +263,10 @@ def _(ast, job_df_cleaned):
 
     # Step 4: Save to CSV
     job_to_skill_relation_df.to_csv(
-        'helping_datasets/job_to_skill_relation_inf_lear.csv',
+        '../datasets/helping_datasets/job_to_skill_relation_inf_lear.csv',
         index=False
     )
+    print("Job-Skill relation data saved.")
     return
 
 
@@ -252,136 +303,8 @@ def _(ast, candidate_df_cleaned, combinations, pd):
 
 
     # Save to CSV
-    skill_to_skill_relation_df.to_csv("helping_datasets/skill_to_skill_relation_inf_lear.csv", index=False)
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    # candidate_df = pd.read_csv('uncleaned_datasets/candidate_opensearch_export.csv')
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    # candidate_df.columns
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    # experience_filtered_df = candidate_df[candidate_df['candidate_experience'] != '[]']
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    # experience_filtered_df['candidate_experience']
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    # experience_filtered_df['candidate_experience'] = experience_filtered_df['candidate_experience'].apply(
-    #     lambda x: ast.literal_eval(x) if isinstance(x, str) and x.startswith('[') else x
-    # )
-    # experience_filtered_df['candidate_experience_len'] = experience_filtered_df['candidate_experience'].apply(len)
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    # def sort_experiences(lst):
-    #     if not isinstance(lst, list):
-    #         return lst
-    #     # Convert strings to datetime safely; handle None
-    #     def to_date(d):
-    #         try:
-    #             return datetime.strptime(d, "%Y-%m-%d")
-    #         except Exception:
-    #             return datetime.min  # treat missing/invalid as earliest
-
-    #     return sorted(
-    #         lst,
-    #         key=lambda x: (
-    #             to_date(x.get('start_date')),
-    #             to_date(x.get('end_date'))
-    #         ),
-    #         reverse=True
-    #     )
-
-
-    # def extract_transitions_text_chronological(experience_list):
-    #     """
-    #     Convert sorted experiences into a list of directed job transitions as strings
-    #     showing progression from oldest -> newest
-    #     """
-    #     if not isinstance(experience_list, list) or len(experience_list) < 2:
-    #         return []
-
-    #     # Reverse the list to go from oldest to newest
-    #     lst = experience_list[::-1]
-
-    #     transitions = []
-    #     for i in range(len(lst) - 1):
-    #         from_role = lst[i]['role'] or 'unknown'
-    #         to_role = lst[i+1]['role'] or 'unknown'
-    #         transitions.append(f"{from_role} -> {to_role}")
-    #     return transitions
-
-
-    # def lowercase_roles(experience_list):
-    #     if not isinstance(experience_list, list):
-    #         return experience_list
-
-    #     for exp in experience_list:
-    #         if 'role' in exp and exp['role']:
-    #             exp['role'] = exp['role'].lower()
-    #     return experience_list
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    # experience_filtered_df['candidate_experience_sorted'] = experience_filtered_df['candidate_experience'].apply(sort_experiences)
-    # experience_filtered_df['candidate_experience_sorted'] = experience_filtered_df['candidate_experience_sorted'].apply(lowercase_roles)
-    # experience_filtered_df['candidate_experience_sorted_graph'] = experience_filtered_df['candidate_experience_sorted'].apply(extract_transitions_text_chronological)
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    # column_name = 'candidate_experience_sorted_graph'
-    # output_csv = "uncleaned_datasets/job_to_job_transition_ORIGINAL.csv"
-
-    # with open(output_csv, "w", newline="", encoding="utf-8") as f_out:
-    #     writer = csv.writer(f_out)
-    #     writer.writerow(["from_role", "to_role"])  # CSV header
-
-    #     for transitions in experience_filtered_df[column_name]:
-    #         if not transitions:  # skip empty lists
-    #             continue
-    #         for line in transitions:
-    #             # Clean the line: remove quotes and extra spaces
-    #             line_clean = line.strip().strip("'")
-    #             if '->' in line_clean:
-    #                 from_role, to_role = [x.strip() for x in line_clean.split('->', 1)]
-    #                 writer.writerow([from_role, to_role])
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    # d_jj_df = pd.read_csv('uncleaned_datasets/job_to_job_transition.csv')
-    # filtered_df_d_jj = d_jj_df[(d_jj_df['from_role'] != 'unknown') | (d_jj_df['to_role'] != 'unknown')]
-
-    # # Clean up spaces and make everything lowercase
-    # d_jj_df['from_role'] = d_jj_df['from_role'].str.strip().str.lower()
-    # d_jj_df['to_role'] = d_jj_df['to_role'].str.strip().str.lower()
-
-    # # Now filter out rows where either column is 'unknown'
-    # clean_df = d_jj_df[(d_jj_df['from_role'] != 'unknown') & (d_jj_df['to_role'] != 'unknown')]
-    # filtered_df_d_jj.to_csv('uncleaned_datasets/job_to_job_transition.csv')
+    skill_to_skill_relation_df.to_csv("../datasets/helping_datasets/skill_to_skill_relation_inf_lear.csv", index=False)
+    print("Skill-Skill relation data saved.")
     return
 
 

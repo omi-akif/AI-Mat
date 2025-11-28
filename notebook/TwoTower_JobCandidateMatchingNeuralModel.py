@@ -8,6 +8,10 @@ app = marimo.App(width="full")
 def _(mo):
     mo.md(r"""
     # AI Job-Candidate Matching using Two-Tower Architecture
+
+    The two-tower model architecture consists of two separate feed-forward (MLP) neural networks that take feature vectors and create low-dimensional dense embeddings. One tower processes job features, and the other processes candidate features.
+
+    The goal is to learn embeddings such that relevant job-candidate pairs are close in the embedding space (high cosine similarity), while irrelevant pairs are far apart. This allows for efficient retrieval and matching.
     """)
     return
 
@@ -15,44 +19,16 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    The two-tower model architecture consists of two seperate feed forward (MLP) neural networks that are able to take feature vectors and create low-dimensional dense embeddings. One is used for one type of entity and another is used for another entity. In our case, one neural network feeds on job features and another neural network feeds on candidate features.
-
-    The specialty of this architecture is that it provides more accurate representation of the features of jobs and candidates which can be compared to provide how similar they are through the embeddings that are gotten as output in the last layer. Since Job and Candidate are two different entities and not directly comparable, two-neural networks are created. Through supervised training, the model should be able to perform more accurate similarity and can be used for any type of recommendation system or matching systems.
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    We will first call all the necessary modules to load data and do some data wrangling and data extraction
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    ## Loading Data and Libraries
+    ## 1. Loading Data and Libraries
     """)
     return
 
 
 @app.cell
 def _():
-    # # Loading Python Libraries
-    # # import os
-    # # import ast
-    # # import requests
     import pandas as pd
     import bentoml
     import mlflow
-    # import torch
-    # from torch.utils.data import DataLoader, Dataset
-    # # import json
-    # # import warnings
-
-    # # warnings.filterwarnings('ignore')
     import ast
     import numpy as np
     import marimo as mo
@@ -62,7 +38,6 @@ def _():
     from torch.utils.data import DataLoader, Dataset
     import pytorch_lightning as L
     from pytorch_lightning.loggers import MLFlowLogger
-    import mlflow
     import optuna
     from optuna.integration import MLflowCallback
     import random
@@ -92,19 +67,15 @@ def _():
 @app.cell
 def _(pd):
     # Loading Candidate and Job data in dataframes
+    annotation_df = pd.read_csv('../datasets/annotation_datasets/two_tower_annotations_B00_1000.csv')
 
-    # candidate_df = pd.read_csv('cleaned_datasets/candidate_data_df_clean.csv')
-    # job_df = pd.read_csv('cleaned_datasets/job_data_df_clean.csv')
+    two_tower_matching_df = pd.read_csv('../datasets/helping_datasets/job_candidate_annotation_data_two_tower_v2.csv')
 
-    annotation_df = pd.read_csv('annotation_datasets/two_tower_annotations_B00_1000.csv')
+    candidate_feature_vector_df = pd.read_csv('../datasets/processed_dataset/candidate_feature_vectors.csv')
+    job_feature_vector_df = pd.read_csv('../datasets/processed_dataset/job_feature_vectors.csv')
 
-    two_tower_matching_df = pd.read_csv('helping_datasets/job_candidate_annotation_data_two_tower_v2.csv')
-
-    candidate_feature_vector_df = pd.read_csv('processed_dataset/candidate_feature_vectors.csv')
-    job_feature_vector_df = pd.read_csv('processed_dataset/job_feature_vectors.csv')
-
-    candidate_df = pd.read_csv('cleaned_datasets/candidate_data_df_clean.csv')
-    job_df = pd.read_csv('cleaned_datasets/job_data_df_clean.csv')
+    candidate_df = pd.read_csv('../datasets/cleaned_datasets/candidate_data_df_clean.csv')
+    job_df = pd.read_csv('../datasets/cleaned_datasets/job_data_df_clean.csv')
     return annotation_df, candidate_feature_vector_df, job_feature_vector_df
 
 
@@ -132,15 +103,7 @@ def _(mlflow, torch):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    The data will very likely have NaN values which needs to be replaced with something meaningful
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    ### Saving Data for Annotation
+    ## 2. Data Preparation for Training
     """)
     return
 
@@ -217,63 +180,13 @@ def _(Dataset, torch):
                 self.job_features[job_index],
                 torch.tensor(label, dtype=torch.float32)
             )
-
-    # candidate_features = torch.tensor(
-    #     result_df_['candidate_feature_vector'].tolist(),
-    #     dtype=torch.float32
-    # )
-
-    # job_features = torch.tensor(
-    #     result_df_['job_feature_vector'].tolist(),
-    #     dtype=torch.float32
-    # )
-
-    # labels = torch.tensor(
-    #     result_df_['label'].tolist(),
-    #     dtype=torch.float32
-    # )
-
-
-    # job_candidate_dataset = CandidateJobDataset(candidate_features, job_features, labels)
-    # job_candidate_dataloader = DataLoader(job_candidate_dataset, batch_size=64, shuffle=True)
     return (CandidateJobDataset,)
-
-
-@app.cell
-def _():
-    # # ==================== Dataset ====================
-    # class JobCandidateDataset(Dataset):
-    #     def __init__(self, candidate_features, job_features, labels):
-    #         """
-    #         df: pandas DataFrame with candidate_features, job_features, and label columns
-    #         candidate_col: name of column containing candidate feature vectors
-    #         job_col: name of column containing job feature vectors
-    #         label_col: name of column containing labels
-    #         """
-    #         self.candidate_features = candidate_features
-    #         self.job_features = job_features
-    #         self.labels = labels
-
-    #     def __len__(self):
-    #         return len(self.labels)
-
-    #     def __getitem__(self, idx):
-    #         candidate_index, job_index, label = self.labels[idx]
-    #         return self.candidate_features[candidate_index], self.job_features[job_index], torch.tensor(label, dtype=torch.float32)
-
-
-    #         row = self.df.iloc[idx]
-    #         candidate_features = torch.tensor(np.array(row[self.candidate_col]), dtype=torch.float32)
-    #         job_features = torch.tensor(np.array(row[self.job_col]), dtype=torch.float32)
-    #         label = torch.tensor(row[self.label_col], dtype=torch.float32)
-    #         return candidate_features, job_features, label
-    return
 
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    # Neural Network Development
+    ## 3. Neural Network Development
     """)
     return
 
@@ -434,14 +347,6 @@ def _(exp_id, mlflow, objective, optuna):
             print("Closing leftover run:", mlflow.active_run().info.run_id)
             mlflow.end_run()
 
-        # Set up MLflow
-        # mlflow.set_tracking_uri("sqlite:///mlflow_database/mlflow.db")
-        # exp = mlflow.get_experiment_by_name("Two-Tower Candidate-Job Matching")
-        # if exp is None:
-        #     exp_id = mlflow.create_experiment("Two-Tower Candidate-Job Matching")
-        # else:
-        #     exp_id = exp.experiment_id
-
         parent_run_name = "Two Tower Study"
 
         # Main optimization loop
@@ -524,7 +429,14 @@ def _(CandidateJobDataset, main, np, result_df_, torch, train_test_split):
 
     # Run optimization
     main(train_dataset, val_dataset, test_dataset, device='gpu')
+    return
 
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    ## 4. Model Loading and Embedding Generation
+    """)
     return
 
 
@@ -562,7 +474,7 @@ def _(bentoml, mlflow_client, model_name_two_tower):
             "run_id": latest.run_id,
         }
 
-    two_tower_info = get_model_info(model_name_two_tower)  # Fixed: use model_name_two_tower instead of device_two_tower
+    two_tower_info = get_model_info(model_name_two_tower)
 
     print(two_tower_info)
     return (two_tower_model,)
@@ -575,26 +487,26 @@ def _(torch):
         # Convert list to tensor if needed
         if not isinstance(candidate_feature_vector, torch.Tensor):
             candidate_feature_vector = torch.tensor(candidate_feature_vector, dtype=torch.float32)
-    
+
         # Add batch dimension (required by model)
         if candidate_feature_vector.dim() == 1:
             candidate_feature_vector = candidate_feature_vector.unsqueeze(0)
-    
+
         # Move to same device as model
         device = next(two_tower_model.parameters()).device
         candidate_feature_vector = candidate_feature_vector.to(device)
-    
+
         with torch.no_grad():
             embedding = two_tower_model.get_candidate_embeddings(candidate_feature_vector)
             embedding = embedding.detach().cpu()
-    
+
         result = embedding.squeeze(0).tolist()
-    
+
         # Clean up
         del candidate_feature_vector
         del embedding
         torch.cuda.empty_cache()
-    
+
         return result
 
     def get_job_embedding(two_tower_model, job_feature_vector):
@@ -602,26 +514,26 @@ def _(torch):
         # Convert list to tensor if needed
         if not isinstance(job_feature_vector, torch.Tensor):
             job_feature_vector = torch.tensor(job_feature_vector, dtype=torch.float32)
-    
+
         # Add batch dimension (required by model)
         if job_feature_vector.dim() == 1:
             job_feature_vector = job_feature_vector.unsqueeze(0)
-    
+
         # Move to same device as model
         device = next(two_tower_model.parameters()).device
         job_feature_vector = job_feature_vector.to(device)
-    
+
         with torch.no_grad():
             embedding = two_tower_model.get_job_embeddings(job_feature_vector)
             embedding = embedding.detach().cpu()
-    
+
         result = embedding.squeeze(0).tolist()
-    
+
         # Clean up
         del job_feature_vector
         del embedding
         torch.cuda.empty_cache()
-    
+
         return result
     return get_candidate_embedding, get_job_embedding
 
@@ -640,8 +552,9 @@ def _(candidate_feature_vector_df, get_candidate_embedding, two_tower_model):
 
 @app.cell
 def _(candidate_feature_vector_df, job_feature_vector_df):
-    job_feature_vector_df.to_csv('processed_dataset/job_embedding_data.csv')
-    candidate_feature_vector_df.to_csv('processed_dataset/candidate_embedding_data.csv')
+    job_feature_vector_df.to_csv('../datasets/processed_dataset/job_embedding_data.csv')
+    candidate_feature_vector_df.to_csv('../datasets/processed_dataset/candidate_embedding_data.csv')
+    print("Embedding data saved to 'processed_dataset' folder.")
     return
 
 

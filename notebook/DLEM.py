@@ -4,6 +4,24 @@ __generated_with = "0.17.7"
 app = marimo.App(width="full")
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Deep Learning Embedding Model (DLEM)
+
+    This notebook implements the Deep Learning Embedding Model (DLEM) for job-candidate matching.
+    The model uses a combination of Convolutional Neural Networks (CNNs) and Attention mechanisms to learn embeddings for both job descriptions and candidate resumes.
+
+    The architecture consists of:
+    1.  **Word2Vec Embedding**: Converts text to dense vectors.
+    2.  **Stacked Convolutional Blocks**: Extracts local features with varying kernel sizes.
+    3.  **Attention Layer**: Focuses on important parts of the text.
+    4.  **Fully Connected Layer**: Produces the final embedding.
+    5.  **Classifier**: Predicts the relevance score based on the concatenated embeddings of job and candidate.
+    """)
+    return
+
+
 @app.cell
 def _():
     import marimo as mo
@@ -21,16 +39,11 @@ def _():
     import torch.nn.functional as F
     from torch.utils.data import Dataset, DataLoader
     from sklearn.model_selection import train_test_split
-    # from sklearn.manifold import TSNE
     import matplotlib.pyplot as plt
     from gensim.models import KeyedVectors
     from scipy.spatial.distance import cdist
-    # from sklearn.metrics.pairwise import cosine_similarity
     from sklearn.utils.class_weight import compute_class_weight
-    # from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score, confusion_matrix, classification_report
-    # from mlflow.tracking import MlflowClient
     from optuna.integration.mlflow import MLflowCallback
-
     import lightning as L
     return (
         DataLoader,
@@ -41,6 +54,7 @@ def _():
         MLFlowLogger,
         compute_class_weight,
         mlflow,
+        mo,
         nn,
         np,
         optuna,
@@ -54,7 +68,6 @@ def _():
 
 @app.cell
 def _(torch):
-    # torch.set_float32_matmul_precision('high')
     torch.backends.cuda.matmul.fp32_precision = 'high'
     torch.backends.cudnn.conv.fp32_precision = 'high'
     return
@@ -62,11 +75,6 @@ def _(torch):
 
 @app.cell
 def _(mlflow):
-    mlflow.end_run()
-    # mlflow.set_tracking_uri("sqlite:///mlflow_database/mlflow.db")
-    # exp = mlflow.set_experiment("DLEM Model Experimentation")
-
-
     exp_id=None
     exp_name = 'DLEM Model Experimentation'
     mlflow.end_run()
@@ -89,6 +97,14 @@ def _(mlflow):
 def _(mlflow):
     mlflow.config.enable_system_metrics_logging()
     mlflow.config.set_system_metrics_sampling_interval(1)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## 1. Model Architecture Definition
+    """)
     return
 
 
@@ -473,6 +489,14 @@ def _(L, nn, torch):
     return (LitDLEM,)
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## 2. Data Preparation
+    """)
+    return
+
+
 @app.cell
 def _(Dataset, np, torch, train_test_split):
     class CandidateJobDataset(Dataset):
@@ -559,7 +583,7 @@ def _(Dataset, np, torch, train_test_split):
 def _(KeyedVectors, compute_class_weight, np, pd, torch):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    job_candidate_matching_annotation_df = pd.read_csv('helping_datasets/job_candidate_matching_annotations_dlem.csv')
+    job_candidate_matching_annotation_df = pd.read_csv('../datasets/helping_datasets/job_candidate_matching_annotations_dlem.csv')
     job_candidate_matching_annotation_df = job_candidate_matching_annotation_df[job_candidate_matching_annotation_df['Score'] != -1]
 
     job_candidate_matching_annotation_df.rename(columns={'Score': 'label'}, inplace=True)
@@ -590,6 +614,14 @@ def _(job_candidate_matching_annotation_df, segment_data, word2vec_model):
         random_state=42
     )
     return test_dataset, train_dataset, val_dataset
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## 3. Training and Hyperparameter Tuning
+    """)
+    return
 
 
 @app.cell
@@ -716,15 +748,6 @@ def _(
                     name='dlem'
             )
             mlflow.log_param("best_child_run_id", best_run_id)
-    return
-
-
-@app.cell
-def _():
-    # mlflow.register_model(
-    #         model_uri=f"runs:/4cbadbf441114aee9beb65b172eee396/production",
-    #         name="dlem-humane-kitten-602"
-    #     )
     return
 
 
