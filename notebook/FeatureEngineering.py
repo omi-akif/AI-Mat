@@ -6,22 +6,20 @@ app = marimo.App(width="full")
 
 @app.cell
 def _(mo):
-    mo.md(
-        r"""
-        # Feature Engineering Pipeline
-        
-        This notebook handles the feature engineering process for both Jobs and Candidates.
-        It performs the following steps:
-        1.  **Load Data**: Reads cleaned data and helper datasets.
-        2.  **One-Hot Encoding**: Encodes categorical variables.
-        3.  **Doc2Vec Encoding**: Encodes text-based lists (e.g., degrees, industries) using MultiLabelBinarizer (as a proxy or placeholder, actual Doc2Vec seems to be handled via `bentoml` models later?). *Correction*: The code uses `MultiLabelBinarizer` for some fields and `bentoml` loaded models for others.
-        4.  **Log Normalization**: Normalizes continuous variables like salary and experience.
-        5.  **Ordinal Encoding**: Encodes ordinal variables like education level.
-        6.  **Deep Learning Embeddings (DLEM)**: Generates embeddings for resumes and job descriptions using a pre-trained DLEM model.
-        7.  **Reinforcement Learning (RL) Embeddings**: Generates embeddings for skills, roles, and professions using a pre-trained RL graph model.
-        8.  **Feature Vector Assembly**: Concatenates all features into a single vector for each job and candidate.
-        """
-    )
+    mo.md(r"""
+    # Feature Engineering Pipeline
+
+    This notebook handles the feature engineering process for both Jobs and Candidates.
+    It performs the following steps:
+    1.  **Load Data**: Reads cleaned data and helper datasets.
+    2.  **One-Hot Encoding**: Encodes categorical variables.
+    3.  **Doc2Vec Encoding**: Encodes text-based lists (e.g., degrees, industries) using MultiLabelBinarizer (as a proxy or placeholder, actual Doc2Vec seems to be handled via `bentoml` models later?). *Correction*: The code uses `MultiLabelBinarizer` for some fields and `bentoml` loaded models for others.
+    4.  **Log Normalization**: Normalizes continuous variables like salary and experience.
+    5.  **Ordinal Encoding**: Encodes ordinal variables like education level.
+    6.  **Deep Learning Embeddings (DLEM)**: Generates embeddings for resumes and job descriptions using a pre-trained DLEM model.
+    7.  **Reinforcement Learning (RL) Embeddings**: Generates embeddings for skills, roles, and professions using a pre-trained RL graph model.
+    8.  **Feature Vector Assembly**: Concatenates all features into a single vector for each job and candidate.
+    """)
     return
 
 
@@ -67,14 +65,14 @@ def _(mlflow, tqdm):
 
 @app.cell
 def _(mo):
-    mo.md(r"""## 1. Load Data""")
+    mo.md(r"""
+    ## 1. Load Data
+    """)
     return
 
 
 @app.cell
 def _(pd):
-    job_candidate_df = pd.read_csv('../datasets/helping_datasets/job_candidate_annotation_data_two_tower.csv')
-
     candidate_df = pd.read_csv('../datasets/cleaned_datasets/candidate_data_df_clean.csv')
     job_df = pd.read_csv('../datasets/cleaned_datasets/job_data_df_clean.csv')
 
@@ -88,7 +86,7 @@ def _(pd):
 
     industry_df = pd.read_csv('../datasets/helping_datasets/industries_list.csv')
     department_df = pd.read_csv('../datasets/helping_datasets/departments_list.csv')
-    return candidate_df, job_candidate_df, job_df
+    return candidate_df, job_df
 
 
 @app.cell
@@ -100,42 +98,40 @@ def _(candidate_df, job_df):
 
 @app.cell
 def _(mo):
-    mo.md(
-        r"""
-        ### Dataset Columns Overview
-        
-        **Job Data Columns:**
-        *   `post_id`: Identifier
-        *   `job_title`: RL Encoding
-        *   `job_description`, `job_requirement`: Text (DLEM Encoding)
-        *   `job_experience`, `minimum_experience`, `maximum_experience`: Continuous (Log Norm)
-        *   `minimum_salary`, `maximum_salary`: Continuous (Log Norm)
-        *   `negotiable`: Binary
-        *   `age_from`, `age_to`: Continuous (Log Norm)
-        *   `job_gender`: Categorical (One-Hot)
-        *   `industry_name`, `department_name`: Doc2Vec Encoding
-        *   `position_name`, `job_district_name`, `job_type_name`: Categorical (One-Hot)
-        *   `job_level_name`, `job_qualification_name`, `qualification_prefer_name`: Ordinal
-        *   `salary_currency`, `job_salary_type`: Categorical (One-Hot)
-        *   `job_skill_name`: RL Encoding (List)
-        *   `job_skill_experience`: Weights (List)
-        
-        **Candidate Data Columns:**
-        *   `id`: Identifier
-        *   `expected_salary`, `present_salary`: Continuous (Log Norm)
-        *   `gender`, `martial_status`, `searching_for_job_status`: Categorical (One-Hot)
-        *   `total_experience`: Continuous (Log Norm)
-        *   `district_name`, `salary_currency_name`, `salary_type_name`: Categorical (One-Hot)
-        *   `level_name`, `qualification_name`: Ordinal
-        *   `degree_institutes`, `degree_names`, `degree_majors`: Doc2Vec Encoding
-        *   `skills_names`: RL Encoding (List)
-        *   `skills_year_of_experiences`: Weights (List)
-        *   `candidate_experience_roles`: RL Encoding (List)
-        *   `candidate_experience_role_duration`: Weights
-        *   `age`: Continuous (Log Norm)
-        *   `candidate_latest_resume_text`: DLEM Encoding
-        """
-    )
+    mo.md(r"""
+    ### Dataset Columns Overview
+
+    **Job Data Columns:**
+    *   `post_id`: Identifier
+    *   `job_title`: RL Encoding
+    *   `job_description`, `job_requirement`: Text (DLEM Encoding)
+    *   `job_experience`, `minimum_experience`, `maximum_experience`: Continuous (Log Norm)
+    *   `minimum_salary`, `maximum_salary`: Continuous (Log Norm)
+    *   `negotiable`: Binary
+    *   `age_from`, `age_to`: Continuous (Log Norm)
+    *   `job_gender`: Categorical (One-Hot)
+    *   `industry_name`, `department_name`: Doc2Vec Encoding
+    *   `position_name`, `job_district_name`, `job_type_name`: Categorical (One-Hot)
+    *   `job_level_name`, `job_qualification_name`, `qualification_prefer_name`: Ordinal
+    *   `salary_currency`, `job_salary_type`: Categorical (One-Hot)
+    *   `job_skill_name`: RL Encoding (List)
+    *   `job_skill_experience`: Weights (List)
+
+    **Candidate Data Columns:**
+    *   `id`: Identifier
+    *   `expected_salary`, `present_salary`: Continuous (Log Norm)
+    *   `gender`, `martial_status`, `searching_for_job_status`: Categorical (One-Hot)
+    *   `total_experience`: Continuous (Log Norm)
+    *   `district_name`, `salary_currency_name`, `salary_type_name`: Categorical (One-Hot)
+    *   `level_name`, `qualification_name`: Ordinal
+    *   `degree_institutes`, `degree_names`, `degree_majors`: Doc2Vec Encoding
+    *   `skills_names`: RL Encoding (List)
+    *   `skills_year_of_experiences`: Weights (List)
+    *   `candidate_experience_roles`: RL Encoding (List)
+    *   `candidate_experience_role_duration`: Weights
+    *   `age`: Continuous (Log Norm)
+    *   `candidate_latest_resume_text`: DLEM Encoding
+    """)
     return
 
 
@@ -171,7 +167,9 @@ def _(candidate_df, job_df):
 
 @app.cell
 def _(mo):
-    mo.md(r"""## 2. Type Casting""")
+    mo.md(r"""
+    ## 2. Type Casting
+    """)
     return
 
 
@@ -285,7 +283,9 @@ def _(ast, candidate_df, job_df):
 
 @app.cell
 def _(mo):
-    mo.md(r"""## 3. Load Models (Word2Vec, DLEM, RL)""")
+    mo.md(r"""
+    ## 3. Load Models (Word2Vec, DLEM, RL)
+    """)
     return
 
 
@@ -363,7 +363,9 @@ def _(
 
 @app.cell
 def _(mo):
-    mo.md(r"""## 4. Helper Functions""")
+    mo.md(r"""
+    ## 4. Helper Functions
+    """)
     return
 
 
@@ -515,17 +517,17 @@ def _(np, pd, torch):
         return emb.tolist()
     return (
         get_dlem_embedding,
-        get_rl_embedding,
         get_single_node_vector,
         get_weighted_node_cluster_vector,
         log_normalize_series,
-        sentence_to_tensor,
     )
 
 
 @app.cell
 def _(mo):
-    mo.md(r"""## 5. One-Hot Encoding""")
+    mo.md(r"""
+    ## 5. One-Hot Encoding
+    """)
     return
 
 
@@ -577,7 +579,9 @@ def _(candidate_df, candidate_ohe, job_df, job_ohe, pickle):
 
 @app.cell
 def _(mo):
-    mo.md(r"""## 6. MultiLabel Binarizer (Doc2Vec features)""")
+    mo.md(r"""
+    ## 6. MultiLabel Binarizer (Doc2Vec features)
+    """)
     return
 
 
@@ -639,7 +643,9 @@ def _(MultiLabelBinarizer, candidate_df, np):
 
 @app.cell
 def _(mo):
-    mo.md(r"""## 7. Log Normalization""")
+    mo.md(r"""
+    ## 7. Log Normalization
+    """)
     return
 
 
@@ -687,7 +693,9 @@ def _(candidate_df, job_df, log_normalize_series, np):
 
 @app.cell
 def _(mo):
-    mo.md(r"""## 8. Ordinal Encoding""")
+    mo.md(r"""
+    ## 8. Ordinal Encoding
+    """)
     return
 
 
@@ -715,7 +723,9 @@ def _(candidate_df, job_df, np):
 
 @app.cell
 def _(mo):
-    mo.md(r"""## 9. DLEM Embedding""")
+    mo.md(r"""
+    ## 9. DLEM Embedding
+    """)
     return
 
 
@@ -740,7 +750,9 @@ def _(
 
 @app.cell
 def _(mo):
-    mo.md(r"""## 10. RL Embedding""")
+    mo.md(r"""
+    ## 10. RL Embedding
+    """)
     return
 
 
@@ -824,7 +836,9 @@ def _(
 
 @app.cell
 def _(mo):
-    mo.md(r"""## 11. Feature Vector Assembly and Saving""")
+    mo.md(r"""
+    ## 11. Feature Vector Assembly and Saving
+    """)
     return
 
 
