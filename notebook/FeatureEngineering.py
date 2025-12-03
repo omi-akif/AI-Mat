@@ -1,10 +1,10 @@
 import marimo
 
-__generated_with = "0.17.7"
+__generated_with = "0.18.1"
 app = marimo.App(width="full")
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     # Feature Engineering Pipeline
@@ -32,7 +32,6 @@ def _():
     import mlflow
     from gensim.models import KeyedVectors
     from sklearn.preprocessing import OneHotEncoder
-    from gensim.models.doc2vec import Doc2Vec, TaggedDocument
     from tqdm import tqdm
     import ast
     import random
@@ -57,13 +56,14 @@ def _():
 
 @app.cell
 def _(mlflow, tqdm):
-    mlflow.set_tracking_uri("sqlite:///mlflow_database/mlflow.db")
+    import os
+    mlflow.set_tracking_uri(f"sqlite:///{os.path.abspath('mlflow_database/mlflow.db')}")
     mlflow_client = mlflow.tracking.MlflowClient()
     tqdm.pandas()
     return (mlflow_client,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     ## 1. Load Data
@@ -76,16 +76,16 @@ def _(pd):
     candidate_df = pd.read_csv('../datasets/cleaned_datasets/candidate_data_df_clean.csv')
     job_df = pd.read_csv('../datasets/cleaned_datasets/job_data_df_clean.csv')
 
-    skills_df = pd.read_csv('../datasets/helping_datasets/skills_list.csv')
-    positions_df = pd.read_csv('../datasets/helping_datasets/positions_list.csv')
-    # location_df = pd.read_csv('../datasets/helping_datasets/locations_list.csv')
+    # skills_df = pd.read_csv('../datasets/helping_datasets/skills_list.csv')
+    # positions_df = pd.read_csv('../datasets/helping_datasets/positions_list.csv')
+    # # location_df = pd.read_csv('../datasets/helping_datasets/locations_list.csv')
 
-    degrees_df = pd.read_csv('../datasets/helping_datasets/degrees_list.csv')
-    majors_df = pd.read_csv('../datasets/helping_datasets/majors_list.csv')
-    institutes_df = pd.read_csv('../datasets/helping_datasets/institutes_list.csv')
+    # degrees_df = pd.read_csv('../datasets/helping_datasets/degrees_list.csv')
+    # majors_df = pd.read_csv('../datasets/helping_datasets/majors_list.csv')
+    # institutes_df = pd.read_csv('../datasets/helping_datasets/institutes_list.csv')
 
-    industry_df = pd.read_csv('../datasets/helping_datasets/industries_list.csv')
-    department_df = pd.read_csv('../datasets/helping_datasets/departments_list.csv')
+    # industry_df = pd.read_csv('../datasets/helping_datasets/industries_list.csv')
+    # department_df = pd.read_csv('../datasets/helping_datasets/departments_list.csv')
     return candidate_df, job_df
 
 
@@ -110,7 +110,7 @@ def _(mo):
     *   `negotiable`: Binary
     *   `age_from`, `age_to`: Continuous (Log Norm)
     *   `job_gender`: Categorical (One-Hot)
-    *   `industry_name`, `department_name`: Doc2Vec Encoding
+    *   `industry_name`, `department_name`: MultiLabelBinarizer Encoding
     *   `position_name`, `job_district_name`, `job_type_name`: Categorical (One-Hot)
     *   `job_level_name`, `job_qualification_name`, `qualification_prefer_name`: Ordinal
     *   `salary_currency`, `job_salary_type`: Categorical (One-Hot)
@@ -124,7 +124,7 @@ def _(mo):
     *   `total_experience`: Continuous (Log Norm)
     *   `district_name`, `salary_currency_name`, `salary_type_name`: Categorical (One-Hot)
     *   `level_name`, `qualification_name`: Ordinal
-    *   `degree_institutes`, `degree_names`, `degree_majors`: Doc2Vec Encoding
+    *   `degree_institutes`, `degree_names`, `degree_majors`: MultiLabelBinarizer Encoding
     *   `skills_names`: RL Encoding (List)
     *   `skills_year_of_experiences`: Weights (List)
     *   `candidate_experience_roles`: RL Encoding (List)
@@ -165,7 +165,7 @@ def _(candidate_df, job_df):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     ## 2. Type Casting
@@ -281,7 +281,7 @@ def _(ast, candidate_df, job_df):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     ## 3. Load Models (Word2Vec, DLEM, RL)
@@ -335,7 +335,7 @@ def _(
 
 
     dlem_model = lit_dlem_model_load._model_impl.get_raw_model()  # This is LitDLEM
-    rl_model = rl_model_load._model_impl.get_raw_model()  # This is LitDLEM
+    rl_model = rl_model_load._model_impl.get_raw_model()  # This is RL
 
 
     device_dlem = next(dlem_model.parameters()).device
@@ -361,7 +361,7 @@ def _(
     return candidate_ohe, device_dlem, dlem_model, job_ohe, rl_model, w2v_model
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     ## 4. Helper Functions
@@ -523,7 +523,7 @@ def _(np, pd, torch):
     )
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     ## 5. One-Hot Encoding
@@ -577,16 +577,16 @@ def _(candidate_df, candidate_ohe, job_df, job_ohe, pickle):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## 6. MultiLabel Binarizer (Doc2Vec features)
+    ## 6. MultiLabel Binarizer Encoding
     """)
     return
 
 
 @app.cell
-def _(MultiLabelBinarizer, candidate_df, np):
+def _(MultiLabelBinarizer, candidate_df, np, pickle):
     candidate_df_cols_doc_2_vec = [
         'degree_institutes',
         'preferredJobCategory_department_names',
@@ -621,6 +621,19 @@ def _(MultiLabelBinarizer, candidate_df, np):
     degree_names_vector = candidate_df_degree_names_mlb.transform(candidate_df_degree_names_list)
     degree_majors_vector = candidate_df_degree_majors_mlb.transform(candidate_df_degree_majors_list)
 
+    # Save MLB models
+    with open('models/candidate_mlb_degree_institutes.pkl', 'wb') as f:
+        pickle.dump(candidate_df_degree_institutes_mlb, f)
+    with open('models/candidate_mlb_preferred_departments.pkl', 'wb') as f:
+        pickle.dump(candidate_df_preferred_departments_mlb, f)
+    with open('models/candidate_mlb_preferred_industries.pkl', 'wb') as f:
+        pickle.dump(candidate_df_preferred_industries_mlb, f)
+    with open('models/candidate_mlb_degree_names.pkl', 'wb') as f:
+        pickle.dump(candidate_df_degree_names_mlb, f)
+    with open('models/candidate_mlb_degree_majors.pkl', 'wb') as f:
+        pickle.dump(candidate_df_degree_majors_mlb, f)
+    print("MLB models saved to 'models' folder.")
+
     candidate_df['degree_institutes_vector'] = list(degree_majors_vector)
     candidate_df['preferred_departments_vector'] = list(preferred_departments_vector)
     candidate_df['preferred_industries_vector'] = list(preferred_industries_vector)
@@ -641,7 +654,7 @@ def _(MultiLabelBinarizer, candidate_df, np):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     ## 7. Log Normalization
@@ -691,7 +704,7 @@ def _(candidate_df, job_df, log_normalize_series, np):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     ## 8. Ordinal Encoding
@@ -721,7 +734,7 @@ def _(candidate_df, job_df, np):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     ## 9. DLEM Embedding
@@ -748,7 +761,7 @@ def _(
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     ## 10. RL Embedding
@@ -834,7 +847,7 @@ def _(
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     ## 11. Feature Vector Assembly and Saving
