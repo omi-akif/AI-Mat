@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.17.7"
+__generated_with = "0.18.1"
 app = marimo.App(width="full")
 
 
@@ -22,7 +22,7 @@ def _():
     import pandas as pd
     import ast
     import os
-    return ast, mo, os, pd
+    return mo, os, pd
 
 
 @app.cell(hide_code=True)
@@ -62,11 +62,11 @@ def _(mo):
 
 
 @app.cell
-def _(ast):
-    def fix_col(col):
-        """Parse string representation of lists/dicts into actual objects."""
-        return col.apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
-    return (fix_col,)
+def _():
+    # def fix_col(col):
+    #     """Parse string representation of lists/dicts into actual objects."""
+    #     return col.apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
+    return
 
 
 @app.cell
@@ -86,10 +86,10 @@ def _(job_df_unclean):
 
 
 @app.cell
-def _(candidate_embedding_df, fix_col, job_embedding_df):
-    # Fix embedding columns
-    candidate_embedding_df['candidate_embedding'] = fix_col(candidate_embedding_df['candidate_embedding'])
-    job_embedding_df['job_embedding'] = fix_col(job_embedding_df['job_embedding'])
+def _():
+    # # Fix embedding columns
+    # candidate_embedding_df['candidate_embedding'] = fix_col(candidate_embedding_df['candidate_embedding'])
+    # job_embedding_df['job_embedding'] = fix_col(job_embedding_df['job_embedding'])
     return
 
 
