@@ -31,7 +31,7 @@ def _():
     import bentoml
     import mlflow
     from gensim.models import KeyedVectors
-    from sklearn.preprocessing import OneHotEncoder
+    from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
     from tqdm import tqdm
     import ast
     import random
@@ -39,11 +39,9 @@ def _():
     import pickle
     import marimo as mo
     return (
-        KeyedVectors,
         MultiLabelBinarizer,
-        OneHotEncoder,
+        OrdinalEncoder,
         ast,
-        bentoml,
         mlflow,
         mo,
         np,
@@ -60,7 +58,7 @@ def _(mlflow, tqdm):
     mlflow.set_tracking_uri(f"sqlite:///{os.path.abspath('mlflow_database/mlflow.db')}")
     mlflow_client = mlflow.tracking.MlflowClient()
     tqdm.pandas()
-    return (mlflow_client,)
+    return
 
 
 @app.cell(hide_code=True)
@@ -289,19 +287,12 @@ def _(mo):
     return
 
 
-@app.cell
-def _(
-    KeyedVectors,
-    MultiLabelBinarizer,
-    OneHotEncoder,
-    bentoml,
-    mlflow,
-    mlflow_client,
-):
+app._unparsable_cell(
+    r"""
     candidate_ohe = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
     job_ohe = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
 
-    job_mlb = MultiLabelBinarizer(sparse_output=False)
+    job_mlb = MultiLabelBinarizer(sparse_ouI am not seeing the codes thattput=False)
     candidate_mlb = MultiLabelBinarizer(sparse_output=False)
 
     # Load Word2Vec model
@@ -314,8 +305,8 @@ def _(
 
     mlflow_client_local = mlflow.tracking.MlflowClient()
 
-    versions_dlem = mlflow_client_local.search_model_versions(f"name='{model_name_dlem}'")
-    versions_rl = mlflow_client_local.search_model_versions(f"name='{model_name_rl}'")
+    versions_dlem = mlflow_client_local.search_model_versions(f\"name='{model_name_dlem}'\")
+    versions_rl = mlflow_client_local.search_model_versions(f\"name='{model_name_rl}'\")
 
     latest_dlem = sorted(versions_dlem, key=lambda v: int(v.version))[-1]
     latest_rl = sorted(versions_rl, key=lambda v: int(v.version))[-1]
@@ -330,8 +321,8 @@ def _(
     )
 
 
-    lit_dlem_model_load = bentoml.mlflow.load_model("dlem:latest")
-    rl_model_load = bentoml.mlflow.load_model("RL-graph-emb:latest")
+    lit_dlem_model_load = bentoml.mlflow.load_model(\"dlem:latest\")
+    rl_model_load = bentoml.mlflow.load_model(\"RL-graph-emb:latest\")
 
 
     dlem_model = lit_dlem_model_load._model_impl.get_raw_model()  # This is LitDLEM
@@ -343,22 +334,24 @@ def _(
 
 
     def get_model_info(model_name):
-        versions = mlflow_client.search_model_versions(f"name='{model_name}'")
+        versions = mlflow_client.search_model_versions(f\"name='{model_name}'\")
         latest = sorted(versions, key=lambda v: int(v.version))[-1]
         return {
-            "name": latest.name,
-            "version": latest.version,
-            "stage": latest.current_stage,
-            "source": latest.source,
-            "run_id": latest.run_id,
+            \"name\": latest.name,
+            \"version\": latest.version,
+            \"stage\": latest.current_stage,
+            \"source\": latest.source,
+            \"run_id\": latest.run_id,
         }
 
     dlem_info = get_model_info(model_name_dlem)
     rl_info = get_model_info(model_name_rl)
 
-    print("DLEM Model Info:", dlem_info)
-    print("RL Model Info:", rl_info)
-    return candidate_ohe, device_dlem, dlem_model, job_ohe, rl_model, w2v_model
+    print(\"DLEM Model Info:\", dlem_info)
+    print(\"RL Model Info:\", rl_info)
+    """,
+    name="_"
+)
 
 
 @app.cell(hide_code=True)
@@ -713,20 +706,45 @@ def _(mo):
 
 
 @app.cell
-def _(candidate_df, job_df, np):
-    ordinal_dict = {
-        'qualification_name_var': {'unidentified': 0, 'psc': 1, 'jsc': 1, 'ssc': 1, 'hsc': 1, 'diploma': 2, 'bachelor': 2, 'mbbs': 2, 'master': 3, 'pdg': 3, 'pdghrm': 3, 'phd': 4, 'phr': 4, 'sphr': 4}, 
-        'level_name_var': {'unidentified': 0, 'student': 1, 'fresher': 1, 'fresher/entry level': 1, 'entry level': 1, 'mid level': 2, 'senior': 3}
-    }
+def _(OrdinalEncoder, candidate_df, job_df, np, pickle):
+    # Define ordinal categories in order from lowest to highest
+    qualification_categories = [[
+        'unidentified', 'psc', 'jsc', 'ssc', 'hsc', 'diploma', 'bachelor', 'mbbs', 'master', 'pdg', 'pdghrm', 'phd', 'phr', 'sphr'
+    ]]
 
-    # candidate_df
-    candidate_df['level_name_vec'] = candidate_df['level_name'].str.lower().map(ordinal_dict['level_name_var'])
-    candidate_df['qualification_name_vec'] = candidate_df['qualification_name'].str.lower().map(ordinal_dict['qualification_name_var'])
+    level_categories = [[
+        'unidentified', 'student', 'fresher', 'fresher/entry level', 'entry level', 'mid level', 'senior'
+    ]]
 
-    # job_df
-    job_df['job_level_name_vec'] = job_df['job_level_name'].str.lower().map(ordinal_dict['level_name_var'])
-    job_df['job_qualification_name_vec'] = job_df['job_qualification_name'].str.lower().map(ordinal_dict['qualification_name_var'])
-    job_df['qualification_prefer_name_vec'] = job_df['qualification_prefer_name'].str.lower().map(ordinal_dict['qualification_name_var'])
+    # Create encoders
+    qualification_encoder = OrdinalEncoder(categories=qualification_categories, handle_unknown='use_encoded_value', unknown_value=-1)
+    level_encoder = OrdinalEncoder(categories=level_categories, handle_unknown='use_encoded_value', unknown_value=-1)
+
+    # Fit and transform candidate ordinal features
+    candidate_df['level_name_lower'] = candidate_df['level_name'].str.lower()
+    candidate_df['qualification_name_lower'] = candidate_df['qualification_name'].str.lower()
+
+    level_encoder.fit(candidate_df[['level_name_lower']])
+    qualification_encoder.fit(candidate_df[['qualification_name_lower']])
+
+    candidate_df['level_name_vec'] = level_encoder.transform(candidate_df[['level_name_lower']]).flatten()
+    candidate_df['qualification_name_vec'] = qualification_encoder.transform(candidate_df[['qualification_name_lower']]).flatten()
+
+    # Transform job ordinal features using the same encoders
+    job_df['job_level_name_lower'] = job_df['job_level_name'].str.lower()
+    job_df['job_qualification_name_lower'] = job_df['job_qualification_name'].str.lower()
+    job_df['qualification_prefer_name_lower'] = job_df['qualification_prefer_name'].str.lower()
+
+    job_df['job_level_name_vec'] = level_encoder.transform(job_df[['job_level_name_lower']]).flatten()
+    job_df['job_qualification_name_vec'] = qualification_encoder.transform(job_df[['job_qualification_name_lower']]).flatten()
+    job_df['qualification_prefer_name_vec'] = qualification_encoder.transform(job_df[['qualification_prefer_name_lower']]).flatten()
+
+    # Save the encoders
+    with open('models/qualification_ordinal_encoder.pkl', 'wb') as f:
+        pickle.dump(qualification_encoder, f)
+    with open('models/level_ordinal_encoder.pkl', 'wb') as f:
+        pickle.dump(level_encoder, f)
+    print("Ordinal encoders saved to 'models' folder.")
 
     # Combine into single vectors
     candidate_df['ord_vec'] = candidate_df[['level_name_vec', 'qualification_name_vec']].apply(lambda x: np.array(x), axis=1)
