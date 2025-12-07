@@ -86,10 +86,18 @@ def _(job_df_unclean):
 
 
 @app.cell
-def _():
+def _(candidate_df_unclean, job_df_unclean_):
     # # Fix embedding columns
     # candidate_embedding_df['candidate_embedding'] = fix_col(candidate_embedding_df['candidate_embedding'])
     # job_embedding_df['job_embedding'] = fix_col(job_embedding_df['job_embedding'])
+
+
+    job_df_unclean_sample = job_df_unclean_.sample(n=2000, random_state=42)
+    candidate_df_unclean_sample = candidate_df_unclean.sample(n=2000, random_state=42)
+
+
+    job_df_unclean_sample.to_csv('../datasets/uncleaned_datasets/job_df_unclean.csv')
+    candidate_df_unclean_sample.to_csv('../datasets/uncleaned_datasets/candidate_df_unclean.csv')
     return
 
 

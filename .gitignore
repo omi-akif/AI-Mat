@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# Virtual Environments
+venv/
+.venv/
+env/
+.env
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Project Specific
+datasets/
+mlruns/
+temp_rows.txt
+*.log
+*.csv
+*.json
+!datasets/processed_dataset/two_tower_annotations.csv # Keep specific important files if needed, but generally ignore data
+# Actually, usually we ignore all data. I will ignore all csv/json in datasets/ but maybe keep config jsons if any.
+# For now, ignoring datasets/ entirely is safer for "unnecessary files".
+
+# Marimo
+.marimo.toml
